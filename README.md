@@ -2,9 +2,14 @@
 
 A Lean 4 + Mathlib project that formally verifies the core mathematics of a constant-product automated market maker (AMM), using exact rational arithmetic (`ℚ`).
 
+This repo was created with reference to the Solidity simple AMM implementation:
+[github.com/partylikeits1983/simpleAMM](https://github.com/partylikeits1983/simpleAMM)
+
+The Lean code models the same swap formula used in the Solidity contract — `amountOut = (dx * y) / (dx + x)` — but proves its properties formally rather than relying on fuzz tests or audits.
+
 ## What this proves
 
-This project models a Uniswap-style `x * y = k` pool and proves **12 theorems** about its behavior:
+This project models a Uniswap-style `x * y = k` pool and proves **16 theorems** about its behavior:
 
 | # | Theorem | Statement |
 |---|---------|-----------|
@@ -58,7 +63,6 @@ def swapX (p : Pool) (dx : ℚ) : Pool :=
 ## Prerequisites
 
 - [Lean 4](https://lean-lang.org/) via [elan](https://github.com/leanprover/elan)
-- Internet connection (to fetch Mathlib)
 
 ## Building
 
@@ -66,10 +70,10 @@ def swapX (p : Pool) (dx : ℚ) : Pool :=
 # First time: fetch dependencies and prebuilt Mathlib cache
 lake update
 
-# Build everything
+# Build everything (proofs + tests)
 lake build
 
-# Build tests
+# Build tests (runs #eval output and proof-level example checks)
 lake build AmmTest
 ```
 
@@ -77,8 +81,9 @@ The first `lake update` downloads ~500MB of Lean toolchain and ~8000 prebuilt Ma
 
 ## Example output
 
-From `#eval` in the test file, with pool `(x=5, y=10)`:
+From `#eval` in the test file:
 
+**Small pool (5 X, 10 Y):**
 ```
 amountOutX p0 1  = 5/3      -- swap 1 X → get 1.67 Y
 amountOutX p0 2  = 20/7     -- swap 2 X → get 2.86 Y (diminishing returns)
@@ -87,8 +92,17 @@ k p0             = 50       -- invariant
 k (swapX p0 1)   = 50       -- invariant preserved!
 rateYperX p0     = 2        -- spot price before
 rateYperX (swapX p0 1) = 25/18  -- spot price after (decreased)
-valueInX p0      = 10       -- = 2 * x
-valueInY p0      = 20       -- = 2 * y
+```
+
+**Balanced pool (100 X, 100 Y) — swap 10 X:**
+```
+Pool before swap:  x = 100, y = 100
+k before swap:     10000
+Swap input (dx):   10
+Swap output (dy):  100/11  (≈ 9.09)
+Pool after swap:   x = 110, y = 1000/11
+k after swap:      10000   (invariant preserved!)
+Rate Y/X after:    100/121  (price impact!)
 ```
 
 ## Tactic reference
